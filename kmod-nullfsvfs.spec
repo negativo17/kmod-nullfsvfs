@@ -1,4 +1,4 @@
-%global	kmod_name nullfs
+%global	kmod_name nullfsvfs
 %global	debug_package %{nil}
 
 # Build flags are inherited from the kernel
@@ -7,16 +7,16 @@
 %{!?kversion: %global kversion %(uname -r)}
 
 Name:           kmod-%{kmod_name}
-Version:        0.22
+Version:        0.26
 Release:        1%{?dist}
 Summary:        A virtual file system that behaves like /dev/null
 License:        GPLv3+
-URL:            https://github.com/abbbi/nullfsvfs
+URL:            https://github.com/abbbi/%{kmod_name}
 
-Source0:        %{url}/archive/v%{version}.tar.gz#/nullfsvfs-%{version}.tar.gz
+Source0:        %{url}/archive/v%{version}.tar.gz#/%{kmod_name}-%{version}.tar.gz
 %if 0%{?rhel} == 9
 # https://github.com/abbbi/nullfsvfs/commit/63661607ded4e3ee0ba35cf50e1166a2b203daeb
-Patch0:         nullfs-el9.patch
+Patch0:         %{kmod_name}-el9.patch
 %endif
 
 BuildRequires:  elfutils-libelf-devel
@@ -31,6 +31,8 @@ Provides:   kabi-modules = %{kversion}
 Provides:   %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
 Requires:   module-init-tools
 
+Obsoletes:  kmod-nullfs < %{?epoch:%{epoch}:}%{version}-%{release}
+
 %description
 A virtual file system that behaves like /dev/null. It can handle regular file
 operations but writing to files does not store any data. The file size is
@@ -44,7 +46,7 @@ This package provides the %{kmod_name} kernel module(s) built for the Linux kern
 using the family of processors.
 
 %prep
-%autosetup -p1 -n nullfsvfs-%{version}
+%autosetup -p1 -n %{kmod_name}-%{version}
 
 echo "override %{kmod_name} * weak-updates/%{kmod_name}" > kmod-%{kmod_name}.conf
 
@@ -93,6 +95,9 @@ fi
 %config %{_sysconfdir}/depmod.d/kmod-%{kmod_name}.conf
 
 %changelog
+* Sun Mar 08 2026 Simone Caronni <negativo17@gmail.com> - 0.26-1
+- Rename to nullfsvfs and update to 0.26.
+
 * Mon Feb 09 2026 Simone Caronni <negativo17@gmail.com> - 0.22-1
 - Update to 0.22.
 
