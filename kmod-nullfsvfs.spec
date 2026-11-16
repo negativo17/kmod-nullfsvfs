@@ -4,6 +4,19 @@
 # Build flags are inherited from the kernel
 %undefine _auto_set_build_flags
 
+# %%bcond is not available in el8's RPM 4.14
+%if 0%{?rhel} == 8
+%bcond_without kabi
+%endif
+%if 0%{?rhel} >= 9
+%bcond kabi 1
+%endif
+
+# kABI kernel modules only on RHEL
+%if 0%{?fedora}
+%bcond kabi 0
+%endif
+
 %{!?kversion: %global kversion %(uname -r)}
 
 Name:           kmod-%{kmod_name}
@@ -21,17 +34,22 @@ Patch0:         %{kmod_name}-el9.patch
 
 BuildRequires:  elfutils-libelf-devel
 BuildRequires:  gcc
-BuildRequires:  kernel-abi-stablelists
 BuildRequires:  kernel-devel
+BuildRequires:  kernel-rpm-macros
 BuildRequires:  kmod
 BuildRequires:  redhat-rpm-config
-BuildRequires:  kernel-rpm-macros
 
-Provides:   kabi-modules = %{kversion}
-Provides:   %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
-Requires:   module-init-tools
+Provides:       %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
+Requires:       module-init-tools
 
-Obsoletes:  kmod-nullfs < %{?epoch:%{epoch}:}%{version}-%{release}
+Obsoletes:      kmod-nullfs < %{?epoch:%{epoch}:}%{version}-%{release}
+
+%if %{with kabi}
+BuildRequires:  kernel-abi-stablelists
+Provides:       kabi-modules = %{kversion}
+%else
+Requires:       kernel-uname-r = %{kversion}
+%endif
 
 %description
 A virtual file system that behaves like /dev/null. It can handle regular file
@@ -48,8 +66,6 @@ using the family of processors.
 %prep
 %autosetup -p1 -n %{kmod_name}-%{version}
 
-echo "override %{kmod_name} * weak-updates/%{kmod_name}" > kmod-%{kmod_name}.conf
-
 %build
 make -C %{_usrsrc}/kernels/%{kversion} M=$PWD modules
 
@@ -58,13 +74,18 @@ export INSTALL_MOD_PATH=%{buildroot}%{_prefix}
 export INSTALL_MOD_DIR=extra/%{kmod_name}
 make -C %{_usrsrc}/kernels/%{kversion} M=$PWD modules_install
 
+%if %{with kabi}
 install -d %{buildroot}%{_sysconfdir}/depmod.d/
-install kmod-%{kmod_name}.conf %{buildroot}%{_sysconfdir}/depmod.d/
+echo "override %{kmod_name} * weak-updates/%{kmod_name}" > %{buildroot}%{_sysconfdir}/depmod.d/kmod-%{kmod_name}.conf
+%endif
+
 # Remove the unrequired files.
 rm -f %{buildroot}%{_prefix}/lib/modules/%{kversion}/modules.*
 
 find %{buildroot} -type f -name '*.ko' | xargs %{__strip} --strip-debug
 find %{buildroot} -type f -name '*.ko' | xargs xz
+
+%if %{with kabi}
 
 %post
 if [ -e "/boot/System.map-%{kversion}" ]; then
@@ -88,15 +109,31 @@ if [ -x "%{_sbindir}/weak-modules" ]; then
     printf '%s\n' "${modules[@]}" | %{_sbindir}/weak-modules --remove-modules
 fi
 
+%else
+
+%post
+if [ -e "/boot/System.map-%{kversion}" ]; then
+    %{_sbindir}/depmod -aeF "/boot/System.map-%{kversion}" "%{kversion}" > /dev/null || :
+fi
+
+%postun
+if [ -e "/boot/System.map-%{kversion}" ]; then
+    %{_sbindir}/depmod -aeF "/boot/System.map-%{kversion}" "%{kversion}" > /dev/null || :
+fi
+
+%endif
 
 %files
 %license LICENSE
 %{_prefix}/lib/modules/%{kversion}/extra/*
+%if %{with kabi}
 %config %{_sysconfdir}/depmod.d/kmod-%{kmod_name}.conf
+%endif
 
 %changelog
 * Mon Nov 16 2026 Simone Caronni <negativo17@gmail.com> - 0.28-1
 - Update to 0.28.
+- Build kABI kernel modules only on RHEL.
 
 * Wed Jul 01 2026 Simone Caronni <negativo17@gmail.com> - 0.27-1
 - Update to 0.27.
