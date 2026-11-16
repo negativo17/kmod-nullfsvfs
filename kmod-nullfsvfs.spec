@@ -7,7 +7,7 @@
 %{!?kversion: %global kversion %(uname -r)}
 
 Name:           kmod-%{kmod_name}
-Version:        0.27
+Version:        0.28
 Release:        1%{?dist}
 Summary:        A virtual file system that behaves like /dev/null
 License:        GPLv3+
@@ -95,6 +95,9 @@ fi
 %config %{_sysconfdir}/depmod.d/kmod-%{kmod_name}.conf
 
 %changelog
+* Mon Nov 16 2026 Simone Caronni <negativo17@gmail.com> - 0.28-1
+- Update to 0.28.
+
 * Wed Jul 01 2026 Simone Caronni <negativo17@gmail.com> - 0.27-1
 - Update to 0.27.
 
