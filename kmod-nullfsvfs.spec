@@ -31,6 +31,10 @@ Source0:        %{url}/archive/v%{version}.tar.gz#/%{kmod_name}-%{version}.tar.g
 # https://github.com/abbbi/nullfsvfs/commit/63661607ded4e3ee0ba35cf50e1166a2b203daeb
 Patch0:         %{kmod_name}-el9.patch
 %endif
+%if 0%{?rhel} == 10
+# EL 10.3+ backports the Linux 6.15 inode_operations->mkdir() change
+Patch1:         %{kmod_name}-el10.patch
+%endif
 
 BuildRequires:  elfutils-libelf-devel
 BuildRequires:  gcc
@@ -133,6 +137,7 @@ fi
 %changelog
 * Mon Nov 16 2026 Simone Caronni <negativo17@gmail.com> - 0.28-1
 - Update to 0.28.
+- Fix build on EL 10.3+.
 - Build kABI kernel modules only on RHEL.
 
 * Wed Jul 01 2026 Simone Caronni <negativo17@gmail.com> - 0.27-1
